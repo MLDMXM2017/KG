@@ -1,10 +1,4 @@
-<!--
- * @Description: file content
- * @Author: your name
- * @Date: 2022-01-01 12:53:00
- * @LastEditors: your name
- * @LastEditTime: 2022-01-01 13:43:38
--->
+
 <template>
   <div class="menu">
     <nav class="nav" id="topnav">

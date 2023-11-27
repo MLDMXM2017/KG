@@ -1,10 +1,4 @@
-<!--
- * @Description: file content
- * @Author: tc
- * @Date: 2022-01-01 12:53:00
- * @LastEditors: your name
- * @LastEditTime: 2022-01-01 14:06:07
--->
+
 <template>
   <div id="follow-us" class="guanzhu" style="padding: 20px;">
           <h2 class="hometitle">交流</h2>

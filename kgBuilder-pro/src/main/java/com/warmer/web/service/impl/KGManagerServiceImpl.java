@@ -43,7 +43,7 @@ public class KGManagerServiceImpl implements KGManagerService {
         item.setLabel(domain);
         item.setNodeCount(0);
         item.setShipCount(0);
-        item.setCreateUser("tc");
+        item.setCreateUser("208");
         item.setCommend(0);
         item.setType(type);
         item.setStatus(1);

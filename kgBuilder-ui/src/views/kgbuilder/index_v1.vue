@@ -1,10 +1,4 @@
-<!--
- * @Description: kgBuilder
- * @Author: tanc
- * @Date: 2021-12-26 16:50:07
- * @LastEditors: Please set LastEditors
- * @LastEditTime: 2022-03-29 11:23:25
--->
+
 <template>
   <div class="mind-box">
     <!-- 左侧 -->

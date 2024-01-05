@@ -27,6 +27,8 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.*;
 
 @RestController
@@ -44,12 +46,80 @@ public class KGBuilderController extends BaseController {
     //获得项目http访问地址
 //    @Value("${server.servlet.context-path}")
 //    private String contextPath;
-    /**
-     * 获取图谱标签列表（存放mysql表）
-     *
-     * @param queryItem
-     * @return
-     */
+
+    @GetMapping("/backup")
+    public String backupNeo4j(@RequestParam String dataPath, @RequestParam String backupPath) {
+        try {
+            // 停止 Neo4j 服务
+            String containerName = "neo4j_container"; // 替换为您的容器名称
+
+// 停止 Neo4j 服务
+            ProcessBuilder stopNeo4j = new ProcessBuilder("docker", "exec", containerName, "neo4j", "stop");
+            stopNeo4j.start().waitFor();
+
+            // 运行 Docker 命令
+            ProcessBuilder dockerCommand = new ProcessBuilder(
+                    "docker", "run", "-i", "--rm",
+                    "-v", dataPath + ":/data",
+                    "neo4j", "neo4j-admin", "database", "dump",
+                    "--to-path=" + backupPath, "neo4j", "--verbose"
+            );
+            Process process = dockerCommand.start();
+
+            // 读取命令的输出
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            StringBuilder output = new StringBuilder();
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+
+            // 等待命令执行完成
+            process.waitFor();
+
+            return output.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error during backup: " + e.getMessage();
+        }
+    }
+
+    @PostMapping("/restore")
+    public String restoreNeo4jDatabase(@RequestParam String dataPath) {
+        try {
+            // 停止 Neo4j 服务
+            String containerName = "neo4j_container"; // 替换为您的容器名称
+
+// 停止 Neo4j 服务
+            ProcessBuilder stopNeo4j = new ProcessBuilder("docker", "exec", containerName, "neo4j", "stop");
+            stopNeo4j.start().waitFor();
+
+            // 构建并执行 Docker 命令
+            ProcessBuilder dockerCommand = new ProcessBuilder(
+                    "docker", "run", "-i", "--rm",
+                    "-v", dataPath + ":/data",
+                    "neo4j", "neo4j-admin", "database", "load",
+                    "--from-path=/data", "neo4j", "--verbose", "--overwrite-destination=true"
+            );
+            Process process = dockerCommand.start();
+
+            // 读取命令的输出
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            StringBuilder output = new StringBuilder();
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+
+            // 等待命令执行完成
+            process.waitFor();
+
+            return output.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error during restore: " + e.getMessage();
+        }
+    }
     @PostMapping(value = "/getGraph") // call db.labels
     public R<GraphPageRecord<KgDomain>> getGraph(@RequestBody GraphQuery queryItem) {
         GraphPageRecord<KgDomain> resultRecord = new GraphPageRecord<KgDomain>();

@@ -345,14 +345,14 @@ export default {
           d3
             .forceLink()
             .distance(function (d) {
-               return 60
+               return 100
               //return Math.floor(Math.random() * (700 - 200)) + 200;
             })
             .id(function (d) {
               return d.uuid;
             })
         )
-        .force("charge", d3.forceManyBody().strength(-400))
+        .force("charge", d3.forceManyBody().strength(-500))
         .force("collide", d3.forceCollide())
         .force("center", d3.forceCenter(width / 2, (height - 200) / 2));
       this.linkGroup = this.svg.append("g").attr("class", "line");
@@ -504,9 +504,18 @@ export default {
         }
         return "none";
       });
+
       this.simulation.nodes(nodes).on("tick", ticked);
       this.simulation.force("link").links(links);
-      this.simulation.alphaTarget(1).restart();
+    this.simulation.force("collide", d3.forceCollide().radius(function(d) {
+        return d.r + 5; // d.r 是节点的半径，+5 表示额外的间距
+      }));
+      // this.simulation.force("charge", d3.forceManyBody().strength(-800)); // 增加排斥力
+      // this.simulation.force("link", d3.forceLink().distance(150)); // 增加连线距离
+      // this.simulation.alphaTarget(1).restart();
+      // this.simulation.nodes(this.graph.nodes);
+      // this.simulation.force("link").links(this.graph.links);
+      this.simulation.alpha(0.3).restart();
       function linkArc (d) {
         let dx = d.target.x - d.source.x,
           dy = d.target.y - d.source.y,
@@ -769,7 +778,7 @@ export default {
     },
     //拖拽开始
     dragStarted (d) {
-      if (!d3.event.active) this.simulation.alphaTarget(0.3).restart();
+      if (!d3.event.active) this.simulation.alphaTarget(0).restart();
        d.x = d3.event.x
       d.y = d3.event.y
       // d.fx = d.x;
@@ -799,7 +808,7 @@ export default {
     },
     //拖拽结束
     dragEnded (d) {
-     if (!d3.event.active) this.simulation.alphaTarget(0.3)
+     if (!d3.event.active) this.simulation.alphaTarget(0)
       let moveNodes=[];
       moveNodes.push({uuid:d.uuid,fx:d.fx,fy:d.fy})
       let relevantNodes=this.graph.links.filter(n=>n.sourceId==d.uuid)
@@ -923,22 +932,37 @@ export default {
         .attr('dy', 4)//文字是站在水平半径这条线上的，所以向下偏移一些，具体值应该是文字高度的一半
         .attr('font-family', '微软雅黑')
         .attr('text-anchor', 'middle')//设置文字居中
-        nodeTextEnter.text(function (d) {
-            let text=d.name
-            const len = text.length;
-            if (d.image) {
-               return ''
-            }else{
-              //取圆的半径r，两边各空出5px,然后求出文字能放的最大长度(parseInt(d.r)-5)*2,一个文字占16px(系统默认font-size=16px),
-              //相除得到最多能放多少汉字，font-size换算比有待考证，文字两边和圆边框的间距忽大忽小，有缘者来优化
-              let dr=(parseInt(d.r)-5)*2/16;
-                  if(dr<len){
-                    return  text.substring(0, dr) + '...';
-                  }else{
-                    return d.name
-                  }
-              }
-         })
+        // nodeTextEnter.text(function (d) {
+        //     let text=d.name
+        //     const len = text.length;
+        //     if (d.image) {
+        //        return ''
+        //     }else{
+        //       //取圆的半径r，两边各空出5px,然后求出文字能放的最大长度(parseInt(d.r)-5)*2,一个文字占16px(系统默认font-size=16px),
+        //       //相除得到最多能放多少汉字，font-size换算比有待考证，文字两边和圆边框的间距忽大忽小，有缘者来优化
+        //       let dr=(parseInt(d.r)-5)*2/16;
+        //           if(dr<len){
+        //             return  text.substring(0, dr) + '...';
+        //           }else{
+        //             return d.name
+        //           }
+        //       }
+        //  })
+      nodeTextEnter.text(function (d) {
+        const radius = parseInt(d.r);
+        let fontSize = radius / 2; // 根据节点半径动态调整字体大小
+        fontSize = Math.max(fontSize, 10); // 设置最小字体大小
+        fontSize = Math.min(fontSize, 16); // 设置最大字体大小
+        d3.select(this).style('font-size', fontSize + 'px');
+
+        let text = d.name;
+        const len = text.length;
+        let maxLength = radius * 2 / (fontSize * 0.6); // 计算节点可以容纳的最大字符数
+        if (len > maxLength) {
+          text = text.substring(0, maxLength) + '...'; // 超出部分用省略号表示
+        }
+        return text;
+      });
       // nodeTextEnter.on("mouseover", function(d, i) {
 
       // });
@@ -1543,7 +1567,7 @@ export default {
       let data = { domain: this.domain };
       kgBuilderApi.exportGraph(data).then(result => {
         if (result.code == 200) {
-          // window.location.href = result.fileUrl;
+          window.location.href = result.fileUrl;
           //下载result.fileUrl
           // window.open(result.fileUrl);
           console.log(result.fileUrl)

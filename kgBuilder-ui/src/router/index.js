@@ -11,6 +11,11 @@ const routes = [
     component: () => import("../views/kgbuilder/index_v1.vue")
   },
   {
+    path: "/neo4j",
+    name: "neo4j",
+    component: () => import("../views/Neo4jOperations.vue")
+  },
+  {
     path: "/builder",
     name: "builder",
     component: () => import("../views/kgbuilder/index.vue")

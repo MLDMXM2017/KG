@@ -18,7 +18,7 @@ spring:
 #      url: bolt://192.168.20.153:7687  #3.x
       url: neo4j://localhost:7687 #4.x
       username: neo4j
-      password: 12345678
+      password: testpassword
   datasource:
       url: jdbc:mysql://localhost:3306/kgdemo?useSSL=false&serverTimezone=UTC
       driverClassName: com.mysql.cj.jdbc.Driver

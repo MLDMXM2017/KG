@@ -119,6 +119,13 @@
             <i class="el-icon-download">导出</i>
           </a>
           <a
+              href="javascript:void(0)"
+              @click="exportDetailGraph"
+              class="svg-a-sm"
+          >
+            <i class="el-icon-download">具体导出</i>
+          </a>
+          <a
             href="javascript:void(0)"
             @click="requestFullScreen"
             class="svg-a-sm"
@@ -147,16 +154,11 @@
         class="mind-cen"
         id="graphcontainerdiv"
       >
-        <div
-          id="nodeDetail"
-          class="node_detail"
-        >
+        <div id="nodeDetail" class="node_detail">
           <h5>详细数据</h5>
-          <span
-            class="node_pd"
-            v-for="(m, k) in nodeDetail"
-            :key="k"
-          >{{ k }}:{{ m }}</span>
+          <span class="node_pd" v-if="k === 'name' || k === 'type'" v-for="(m, k) in nodeDetail" :key="k">
+    {{ k }}: {{ m }}
+            </span>
         </div>
         <!-- 中部图谱画布 -->
         <div
@@ -373,6 +375,7 @@ export default {
     },
     //初始化画布数据
     updateGraph () {
+      console.log("updateGraph");
       let lks = this.graph.links;
       let nodes = this.graph.nodes;
       let links = [];
@@ -386,6 +389,8 @@ export default {
         }
         if (typeof n.fx == "string") n.fx = parseFloat(n.fx);
         if (typeof n.fy == "string") n.fy = parseFloat(n.fy);
+        n.fx = null;
+        n.fy = null;
         if (typeof n.r == "string") n.r = parseInt(n.r);
       });
       lks.forEach(function (m) {
@@ -668,6 +673,7 @@ export default {
     },
     //创建节点
     createNode (graphNode) {
+      console.log("crate")
       let data = graphNode;
       data.domain = this.domain;
       let _this = this;
@@ -778,15 +784,28 @@ export default {
     },
     //拖拽开始
     dragStarted (d) {
-      if (!d3.event.active) this.simulation.alphaTarget(0).restart();
+      console.log("drag")
+      // if (!d3.event.active) this.simulation.alphaTarget(0.3);
        d.x = d3.event.x
       d.y = d3.event.y
-      // d.fx = d.x;
-      // d.fy = d.y;
-      //d.fixed = true;
+      d.fx = d.x;
+      d.fy = d.y;
+      d.fixed = true;
+      let connectedNodeIds = this.graph.links
+          .filter(link => link.sourceId === d.uuid || link.targetId === d.uuid)
+          .map(link => link.sourceId === d.uuid ? link.targetId : link.sourceId);
+
+      // 固定所有与当前节点直接相连的节点
+      this.graph.nodes.forEach(node => {
+        if (connectedNodeIds.includes(node.uuid)) {
+          node.fx = node.x;
+          node.fy = node.y;
+        }
+      });
     },
     //拖拽中
     dragged (d) {
+      console.log("dragged")
            let vx=d3.event.x-d.x;//x轴偏移量
       let vy=d3.event.y-d.y;//y轴偏移量
       d.x = d3.event.x
@@ -808,7 +827,10 @@ export default {
     },
     //拖拽结束
     dragEnded (d) {
-     if (!d3.event.active) this.simulation.alphaTarget(0)
+      d.fx = d.x;
+      d.fy = d.y;
+      console.log("dragEnded")
+     if (!d3.event.active) this.simulation.alphaTarget(0.3)
       let moveNodes=[];
       moveNodes.push({uuid:d.uuid,fx:d.fx,fy:d.fy})
       let relevantNodes=this.graph.links.filter(n=>n.sourceId==d.uuid)
@@ -824,10 +846,11 @@ export default {
       console.log(moveNodes)
       //批量更新本次移动的节点坐标
       let data={domain:this.domain,nodes:moveNodes}
-      kgBuilderApi.updateCoordinateOfNode(data).then(result => { });
+      // kgBuilderApi.updateCoordinateOfNode(data).then(result => { });
     },
     //绘制节点
     drawNode (node) {
+      console.log("drawNode")
       let _this = this;
       let nodeEnter = node.enter().append("circle");
       nodeEnter.attr("r", function (d) {
@@ -1003,6 +1026,7 @@ export default {
     },
     //给节点画上标识
     drawNodeSymbol (nodeSymbol) {
+      console.log("drawNode")
       let symbol_path =
         "M566.92736 550.580907c30.907733-34.655573 25.862827-82.445653 25.862827-104.239787 0-108.086613-87.620267-195.805867-195.577173-195.805867-49.015467 0-93.310293 18.752853-127.68256 48.564907l-0.518827-0.484693-4.980053 4.97664c-1.744213 1.64864-3.91168 2.942293-5.59104 4.72064l0.515413 0.484693-134.69696 133.727573L216.439467 534.8352l0 0 137.478827-136.31488c11.605333-10.410667 26.514773-17.298773 43.165013-17.298773 36.051627 0 65.184427 29.197653 65.184427 65.24928 0 14.032213-5.33504 26.125653-12.73856 36.829867l-131.754667 132.594347 0.515413 0.518827c-10.31168 11.578027-17.07008 26.381653-17.07008 43.066027 0 36.082347 29.16352 65.245867 65.184427 65.245867 16.684373 0 31.460693-6.724267 43.035307-17.07008l0.515413 0.512M1010.336427 343.49056c0-180.25472-145.882453-326.331733-325.911893-326.331733-80.704853 0-153.77408 30.22848-210.418347 79.0528l0.484693 0.64512c-12.352853 11.834027-20.241067 28.388693-20.241067 46.916267 0 36.051627 29.16352 65.245867 65.211733 65.245867 15.909547 0 29.876907-6.36928 41.192107-15.844693l0.38912 0.259413c33.624747-28.030293 76.301653-45.58848 123.511467-45.58848 107.99104 0 195.549867 87.6544 195.549867 195.744427 0 59.815253-27.357867 112.71168-69.51936 148.503893l0 0-319.25248 317.928107 0 0c-35.826347 42.2912-88.654507 69.710507-148.340053 69.710507-107.956907 0-195.549867-87.68512-195.549867-195.805867 0-59.753813 27.385173-112.646827 69.515947-148.43904l-92.18048-92.310187c-65.69984 59.559253-107.700907 144.913067-107.700907 240.749227 0 180.28544 145.885867 326.301013 325.915307 326.301013 95.218347 0 180.02944-41.642667 239.581867-106.827093l0.13312 0.129707 321.061547-319.962453-0.126293-0.13312C968.69376 523.615573 1010.336427 438.71232 1010.336427 343.49056L1010.336427 343.49056 1010.336427 343.49056zM1010.336427 343.49056"; // 定义回形针形状
       let nodeSymbolEnter = nodeSymbol
@@ -1020,6 +1044,7 @@ export default {
     },
     //构建节点环形按钮组
     drawNodeButton (nodeButton) {
+      console.log("drawNodeButto")
       let nodeButtonEnter = nodeButton
         .enter()
         .append("g")
@@ -1039,6 +1064,7 @@ export default {
     },
     //构建连线，绑定事件
     drawLink (link) {
+      console.log("drawlink")
       let _this = this;
       let linkEnter = link
         .enter()
@@ -1436,7 +1462,18 @@ export default {
           //把不存在于画布的节点添加到画布
           this.mergeNodeAndLink(result.data.node, result.data.relationship);
           //重新绘制
+          // 遍历新添加的节点，并设置其 fx 和 fy 为当前坐标，以固定它们的位置
+
+          result.data.node.forEach(newNode => {
+            let existingNode = this.graph.nodes.find(node => node.id === newNode.id);
+            if (existingNode) {
+              existingNode.fx = existingNode.x;
+              existingNode.fy = existingNode.y;
+              console.log(existingNode)
+            }
+          });
           this.updateGraph();
+          this.simulation.alpha(1).restart();
         }
       });
     },
@@ -1565,7 +1602,24 @@ export default {
         return;
       }
       let data = { domain: this.domain };
-      kgBuilderApi.exportGraph(data).then(result => {
+      const config = {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      kgBuilderApi.exportGraph(data, config).then(result => {
+        if (result.code == 200) {
+          window.location.href = result.fileUrl;
+          //下载result.fileUrl
+          // window.open(result.fileUrl);
+          console.log(result.fileUrl)
+        }
+      });
+    },
+    exportDetailGraph () {
+      let jsonGraph = JSON.stringify(this.graph);
+      console.log(this.graph)
+      kgBuilderApi.exportDetailGraph(this.graph).then(result => {
         if (result.code == 200) {
           window.location.href = result.fileUrl;
           //下载result.fileUrl
@@ -1590,6 +1644,7 @@ export default {
     },
     //合并节点和连线
     mergeNodeAndLink (newNodes, newLinks) {
+      console.log("mergeNodeAndLink")
       let _this = this;
       newNodes.forEach(function (m) {
         let sobj = _this.graph.nodes.find(function (x) {

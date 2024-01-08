@@ -136,12 +136,19 @@
       <!-- 头部over -->
       <!-- 中部 -->
       <el-scrollbar class="mind-cen" id="graphcontainerdiv">
+<!--        <div id="nodeDetail" class="node_detail">-->
+<!--          <h5>详细数据</h5>-->
+<!--          <span class="node_pd" v-for="(m, k) in nodeDetail" :key="k"-->
+<!--            >{{ k }}:{{ m }}</span-->
+<!--          >-->
+<!--        </div>-->
         <div id="nodeDetail" class="node_detail">
           <h5>详细数据</h5>
-          <span class="node_pd" v-for="(m, k) in nodeDetail" :key="k"
-            >{{ k }}:{{ m }}</span
-          >
+          <span class="node_pd" v-if="k === 'name' || k === 'type'" v-for="(m, k) in nodeDetail" :key="k">
+    {{ k }}: {{ m }}
+  </span>
         </div>
+
         <!-- 中部图谱画布 -->
         <div id="graphContainer" class="graphContainer">
           <kgbuilder

@@ -28,9 +28,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 @RestController
 @RequestMapping(value = "/")
 public class KGBuilderController extends BaseController {
@@ -49,11 +55,12 @@ public class KGBuilderController extends BaseController {
 
     @GetMapping("/backup")
     public String backupNeo4j(@RequestParam String dataPath, @RequestParam String backupPath) {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
+            System.out.println("Starting backup...");
+
             // 停止 Neo4j 服务
             String containerName = "neo4j_container"; // 替换为您的容器名称
-
-// 停止 Neo4j 服务
             ProcessBuilder stopNeo4j = new ProcessBuilder("docker", "exec", containerName, "neo4j", "stop");
             stopNeo4j.start().waitFor();
 
@@ -66,21 +73,37 @@ public class KGBuilderController extends BaseController {
             );
             Process process = dockerCommand.start();
 
-            // 读取命令的输出
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            StringBuilder output = new StringBuilder();
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
+            // 异步读取标准输出和错误
+            StreamGobbler outputGobbler = new StreamGobbler(process.getInputStream(), System.out::println);
+            StreamGobbler errorGobbler = new StreamGobbler(process.getErrorStream(), System.err::println);
+
+            // 提交任务到线程池
+            executor.submit(outputGobbler);
+            executor.submit(errorGobbler);
 
             // 等待命令执行完成
-            process.waitFor();
+            int exitCode = process.waitFor();
+            executor.shutdown();
 
-            return output.toString();
+            return exitCode == 0 ? "Backup completed successfully" : "Backup failed with exit code " + exitCode;
         } catch (Exception e) {
             e.printStackTrace();
             return "Error during backup: " + e.getMessage();
+        }
+    }
+
+    private static class StreamGobbler implements Runnable {
+        private InputStream inputStream;
+        private Consumer<String> consumer;
+
+        public StreamGobbler(InputStream inputStream, Consumer<String> consumer) {
+            this.inputStream = inputStream;
+            this.consumer = consumer;
+        }
+
+        @Override
+        public void run() {
+            new BufferedReader(new InputStreamReader(inputStream)).lines().forEach(consumer);
         }
     }
 
@@ -89,32 +112,17 @@ public class KGBuilderController extends BaseController {
         try {
             // 停止 Neo4j 服务
             String containerName = "neo4j_container"; // 替换为您的容器名称
-
-// 停止 Neo4j 服务
-            ProcessBuilder stopNeo4j = new ProcessBuilder("docker", "exec", containerName, "neo4j", "stop");
-            stopNeo4j.start().waitFor();
-
-            // 构建并执行 Docker 命令
-            ProcessBuilder dockerCommand = new ProcessBuilder(
+            CommandHelper.executeCommand(Arrays.asList("docker", "exec", containerName, "neo4j", "stop"));
+            // 构建并执行 Docker 命令进行恢复
+            List<String> commands = Arrays.asList(
                     "docker", "run", "-i", "--rm",
                     "-v", dataPath + ":/data",
                     "neo4j", "neo4j-admin", "database", "load",
-                    "--from-path=/data", "neo4j", "--verbose", "--overwrite-destination=true"
+                    "--from-path=/data", "neo4j", "--verbose","--overwrite-destination=true"
             );
-            Process process = dockerCommand.start();
 
-            // 读取命令的输出
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            StringBuilder output = new StringBuilder();
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-
-            // 等待命令执行完成
-            process.waitFor();
-
-            return output.toString();
+            // 执行命令并获取输出
+            return CommandHelper.executeCommand(commands);
         } catch (Exception e) {
             e.printStackTrace();
             return "Error during restore: " + e.getMessage();
@@ -773,4 +781,73 @@ public class KGBuilderController extends BaseController {
         }
     }
 
+    @RequestMapping(value = "/exportDetailGraph", method = RequestMethod.POST)
+    public Map<String, Object> exportGraph1(@RequestBody String jsonData, HttpServletRequest request) {
+        Map<String, Object> res = new HashMap<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        String fileName = UUID.randomUUID() + ".csv";
+        String fileUrl = config.getLocation() + fileName;
+
+        try {
+            CsvWriter csvWriter = CsvUtil.getWriter(fileUrl, CharsetUtil.CHARSET_UTF_8);
+            JsonNode rootNode = objectMapper.readTree(jsonData);
+
+            // 写入表头
+            String[] header = {"SourceName", "SourceType", "TargetName", "TargetType", "Relation", "RelationType"};
+            csvWriter.write(header);
+
+            JsonNode nodes = rootNode.path("nodes");
+            JsonNode links = rootNode.path("links");
+
+            for (JsonNode link : links) {
+                String sourceId = link.path("sourceId").asText();
+                String targetId = link.path("targetId").asText();
+                String relation = link.path("name").asText();
+                String relationType = link.path("type").asText();
+
+                String sourceName = findNodeNameById(nodes, sourceId);
+                String targetName = findNodeNameById(nodes, targetId);
+                String sourceType = findNodeTypeById(nodes, sourceId);
+                String targetType = findNodeTypeById(nodes, targetId);
+
+                String[] rowData = {sourceName, sourceType, targetName, targetType, relation, relationType};
+                csvWriter.write(rowData);
+            }
+
+            csvWriter.close();
+
+            // 设置返回的URL
+            String serverUrl = request.getServerName() + ":" + request.getServerPort() + request.getContextPath();
+            String csvUrl = "http://" + serverUrl + "/file/download/" + fileName;
+
+            res.put("code", 200);
+            res.put("fileUrl", csvUrl);
+            res.put("message", "success!");
+        } catch (Exception e) {
+            e.printStackTrace();
+            res.put("code", -1);
+            res.put("message", "Error in processing JSON: " + e.getMessage());
+        }
+
+        return res;
+    }
+
+    private String findNodeNameById(JsonNode nodes, String uuid) {
+        for (JsonNode node : nodes) {
+            if (node.path("uuid").asText().equals(uuid)) {
+                return node.path("name").asText();
+            }
+        }
+        return null;
+    }
+
+    private String findNodeTypeById(JsonNode nodes, String uuid) {
+        for (JsonNode node : nodes) {
+            if (node.path("uuid").asText().equals(uuid)) {
+                return node.path("type").asText();
+            }
+        }
+        return null;
+    }
 }

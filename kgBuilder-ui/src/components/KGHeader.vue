@@ -31,42 +31,10 @@ export default {
   data() {
     return {
       navList: [
-        {
-          title: "首页",
-          icon: "glyphicon glyphicon-cog",
-          linkUrl: "http://www.miaoleyan.com",
-          active: false,
-          childrens: []
-        },
-        {
-          title: "分享",
-          icon: "glyphicon glyphicon-th-list",
-          linkUrl: "javascript:void(0);",
-          active: false,
-          childrens: [
-            {
-              title: "杨青博客",
-              icon: "",
-              linkUrl: "http://www.yangqq.com/",
-              active: false,
-              childrens: []
-            },
-            {
-              title: "程序猿DD",
-              icon: "",
-              linkUrl: "http://blog.didispace.com/",
-              active: false,
-              childrens: []
-            },
-            {
-              title: "hAdmin",
-              icon: "",
-              linkUrl: "http://demo.mycodes.net/houtai/hAdmin",
-              active: false,
-              childrens: []
-            }
-          ]
-        }
+
+
+
+
       ]
     };
   },

@@ -1,4 +1,5 @@
 import BaseAPI from '@/utils/BaseAPI'
+import axios from "axios";
 
 class kgBuilderApi extends BaseAPI{
   // 获取图谱数据
@@ -146,6 +147,11 @@ class kgBuilderApi extends BaseAPI{
   exportGraph(data) {
     return this.post("/exportGraph",data);
   }
+  exportDetailGraph(data) {
+    return this.post("/exportDetailGraph",data,{headers: {
+      'Content-Type': 'application/json'
+    }});
+  }
   downloadFile(data) {
     return this.get("/downloadFile",data);
   }
@@ -159,6 +165,22 @@ class kgBuilderApi extends BaseAPI{
       }
     });
   }
+  BackUp(data) {
+    console.log(data)
+    return this.get("/backup",{
 
+        dataPath: data.dataPath,
+        backupPath: data.backupPath
+
+    });
+  }
+
+  //数据恢复
+  Restore(data) {
+    console.log(data)
+    return this.post("/restore",data);
+  }
 }
+
+//backup
 export default new kgBuilderApi();

@@ -13,16 +13,16 @@
         <el-form-item label="类型" label-width="120px">
           <el-radio-group v-model="uploadParam.type">
             <el-radio key="index-1" label="1">三元组</el-radio>
-            <el-radio key="index-2" label="2">单元格树</el-radio>
+<!--            <el-radio key="index-2" label="2">单元格树</el-radio>-->
           </el-radio-group>
         </el-form-item>
         <el-form-item>
           <div v-if="uploadParam.type==1">
              <div>导入csv或者excel，三元组结构:节点-节点-关系如果是csv,注意字符集为utf-8无bom格式<br/>【不会的用记事本打开，然后另存为，选择utf-8 无bom】)</div>
               <el-carousel >
-                <el-carousel-item v-for="item in [require('@/assets/sanyuanzuimport1.png'),require('@/assets/sanyuanzuimport2.png')]" :key="item">
-                  <img  :src="item" />
-                </el-carousel-item>
+<!--                <el-carousel-item v-for="item in [require('@/assets/sanyuanzuimport1.png'),require('@/assets/sanyuanzuimport2.png')]" :key="item">-->
+<!--                  <img  :src="item" />-->
+<!--                </el-carousel-item>-->
               </el-carousel>
             </div>
             <div v-else style="max-height:calc(100vh - 80px);over-flow-y:scroll">

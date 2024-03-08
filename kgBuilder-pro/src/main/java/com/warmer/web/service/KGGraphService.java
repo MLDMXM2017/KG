@@ -240,5 +240,6 @@ public interface KGGraphService {
 
 	void importBySyz(MultipartFile file, HttpServletRequest request,String label,Integer isCreateIndex)throws Exception ;
 	void importBySyz1(MultipartFile file, HttpServletRequest request,String label,Integer isCreateIndex)throws Exception ;
+	void importBySyz2(MultipartFile file, HttpServletRequest request,String label,Integer isCreateIndex)throws Exception ;
 	void importByCategory(MultipartFile file, HttpServletRequest request,String label)throws Exception ;
 }

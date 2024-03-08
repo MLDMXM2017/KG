@@ -176,6 +176,9 @@ public class KGGraphServiceImpl implements KGGraphService {
     public void batchInsertByCSV1(String domain, String csvUrl, int status) {
         kgRepository.batchInsertByCsv1(domain, csvUrl, status);
     }
+    public void batchInsertByCSV2(String domain, String csvUrl, int status) {
+        kgRepository.batchInsertByCsv2(domain, csvUrl, status);
+    }
     @Override
     public void importBySyz(MultipartFile file,HttpServletRequest request,String label,Integer isCreateIndex) throws Exception {
         List<Map<String, Object>> dataList = getFormatData(file);
@@ -209,8 +212,38 @@ public class KGGraphServiceImpl implements KGGraphService {
         }
         String serverUrl=request.getServerName() + ":" + request.getServerPort() + request.getContextPath();
         String csvUrl = "http://"+serverUrl+ "/file/download/" + filename;
+
         batchInsertByCSV1(label, csvUrl, isCreateIndex);
     }
+
+    @Override
+    public void importBySyz2(MultipartFile file, HttpServletRequest request, String label, Integer isCreateIndex) throws Exception {
+        List<Map<String, Object>> dataList = getFormatData(file);
+        String filename = IdUtil.getSnowflakeNextIdStr() + ".csv";
+
+        // 修改这里以指向你的挂载目录
+        String mountPath = "C:\\Users\\Windows\\IdeaProjects\\KG\\neo4j-import\\";  // 宿主机上的相对路径
+        String fullFileName = mountPath + filename;
+
+        CsvWriter writer = CsvUtil.getWriter(fullFileName, CharsetUtil.CHARSET_UTF_8);
+        for (Map<String, Object> item : dataList) {
+            String[] lst = new String[6];
+            lst[0] = item.get("sourceNode").toString();
+            lst[1] = item.get("targetNode").toString();
+            lst[2] = item.get("relationship").toString();
+            // 确保其他三列也被写入
+            lst[3] = item.getOrDefault("x_type", "").toString();
+            lst[4] = item.getOrDefault("y_type", "").toString();
+            lst[5] = item.getOrDefault("display_relation", "").toString();
+            writer.write(lst);
+        }
+
+        // 因为文件已经在容器可见的挂载点，你可以直接使用文件路径
+        String csvFilePath = "/var/lib/neo4j/import/" + filename; // 容器内的路径
+
+        batchInsertByCSV2(label, csvFilePath, isCreateIndex);
+    }
+
 
     private List<Map<String, Object>> getFormatData(MultipartFile file) throws Exception {
         List<Map<String, Object>> mapList = new ArrayList<>();
@@ -263,10 +296,17 @@ public class KGGraphServiceImpl implements KGGraphService {
                 CsvData data = reader.read(fileTemp);
                 for (CsvRow csvRow : data) {
                     List<String> lst = csvRow.getRawList();
+                    // 确保行中有足够的列
+                    if (lst.size() < 6) {
+                        continue;
+                    }
                     Map<String, Object> map = new HashMap<String, Object>();
                     map.put("sourceNode", lst.get(0));
                     map.put("targetNode", lst.get(1));
                     map.put("relationship", lst.get(2));
+                    map.put("x_type", lst.get(3)); // 添加第四列
+                    map.put("y_type", lst.get(4)); // 添加第五列
+                    map.put("display_relation", lst.get(5)); // 添加第六列
                     mapList.add(map);
                 }
 

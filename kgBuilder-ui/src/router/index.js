@@ -15,6 +15,12 @@ const routes = [
     name: "neo4j",
     component: () => import("../views/Neo4jOperations.vue")
   },
+    //loginRegister
+    {
+      path: "/loginRegister",
+      name: "loginRegister",
+      component: () => import("../views/loginRegister.vue")
+    },
   {
     path: "/builder",
     name: "builder",

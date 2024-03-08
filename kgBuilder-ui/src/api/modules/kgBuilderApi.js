@@ -180,6 +180,10 @@ class kgBuilderApi extends BaseAPI{
     console.log(data)
     return this.post("/restore",data);
   }
+  //登录
+  login(data) {
+    return this.post("/login",data);
+  }
 }
 
 //backup

@@ -727,6 +727,43 @@ public class KGGraphRepository implements KGGraphDao {
         System.out.println("程序运行时间：" + (endTime - startTime) + "ms");
     }
 
+    public void batchInsertByCsv2(String domain, String csvFilePath, int isCreateIndex) {
+        System.out.println(csvFilePath);
+        //取文件名
+//        csvFilePath = csvFilePath.substring(csvFilePath.lastIndexOf("/") + 1);
+        String loadNodeCypher1 = null;
+        String loadNodeCypher2 = null;
+        String addIndexCypher = null;
+        addIndexCypher = "CREATE INDEX FOR (n:`" + domain + "`) ON (n.name);";
+        loadNodeCypher1 = "CALL { LOAD CSV WITH HEADERS FROM 'file:///" + csvFilePath + "' AS line "
+                + "MERGE (a:`" + domain + "` {name: COALESCE(line['x_name'], 'undefined'), type: COALESCE(line['x_type'], 'undefined')}) } IN TRANSACTIONS;";
+        loadNodeCypher2 = "CALL { LOAD CSV WITH HEADERS FROM 'file:///" + csvFilePath + "' AS line "
+                + "MERGE (b:`" + domain + "` {name: COALESCE(line['y_name'], 'undefined'), type: COALESCE(line['y_type'], 'undefined')}) } IN TRANSACTIONS;";
+
+        // 拼接生产关系导入cypher
+        String loadRelCypher = null;
+        String type = "RE"; // Adjust the relationship type as needed
+        loadRelCypher = "CALL { LOAD CSV WITH HEADERS FROM 'file:///" + csvFilePath + "' AS line "
+                + "MATCH (m:`" + domain + "` {name: line['x_name']}), (n:`" + domain + "` {name: line['y_name']}) "
+                + "MERGE (m)-[r:" + type + " {name: line['display_relation']}]->(n) "
+                + "ON CREATE SET r.relation = COALESCE(line['relation'], 'undefined'), r.type = COALESCE(line['y_type'], 'undefined') } IN TRANSACTIONS";
+
+        if(isCreateIndex == 0) { // Do not recreate the index if it already exists
+            Neo4jUtil.runCypherSql(addIndexCypher);
+        }
+        // Record start time
+        long startTime = System.currentTimeMillis();
+
+        Neo4jUtil.runCypherSql(loadNodeCypher1);
+        Neo4jUtil.runCypherSql(loadNodeCypher2);
+        Neo4jUtil.runCypherSql(loadRelCypher);
+        // Record end time
+        long endTime = System.currentTimeMillis();
+        // Calculate the time difference
+        System.out.println("Program execution time：" + (endTime - startTime) + "ms");
+    }
+
+
     @Override
     public void updateNodeFileStatus(String domain, long nodeId, int status) {
         try {
